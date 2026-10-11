@@ -25,11 +25,11 @@ Configuración (`application.yml`): `lab.latency-ms` (latencia de red simulada, 
 
 ## Frontend Dashboard
 
-![img.png](dashboard.png)
+![img.png](docs/dashboard.png)
 
 ## Secuencias Visuales de flujos
 
-![img_1.png](flow.png)
+![img_1.png](docs/flow.png)
 
 
 ## Qué se ve en el panel (`/`)
