@@ -23,6 +23,15 @@ gradle wrapper --gradle-version 8.14.3   # una sola vez (el wrapper no se incluy
 Configuración (`application.yml`): `lab.latency-ms` (latencia de red simulada, por defecto 400 ms) y
 `lab.replication.auto` (`false` = la replicación solo avanza a mano; lo usan las pruebas de integración).
 
+## Frontend Dashboard
+
+![img.png](dashboard.png)
+
+## Secuencias Visuales de flujos
+
+![img_1.png](flow.png)
+
+
 ## Qué se ve en el panel (`/`)
 
 - **Selector CP / AP** y **slider de latencia** de red simulada.
