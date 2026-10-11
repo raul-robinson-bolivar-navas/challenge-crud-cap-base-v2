@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: cap-base-lab
+
+server:
+  port: 8080
+
+lab:
+  # Latencia de red simulada entre nodos (ms). Es lo que hace visible el trade-off PACELC:
+  #  - CP espera esta latencia en cada operación (quórum síncrono)
+  #  - AP responde al instante y replica en segundo plano tras esta latencia
+  latency-ms: 400
+  replication:
+    auto: true   # false = la replicación solo avanza manualmente (útil en pruebas)

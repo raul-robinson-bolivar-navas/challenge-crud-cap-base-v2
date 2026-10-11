@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Laboratorio CAP &amp; BASE</title>
+    <link rel="icon" href="img/favicon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Aplica el tema guardado antes de pintar, para evitar el destello -->
+    <script>
+        (function () {
+            try {
+                var d = document.documentElement;
+                d.dataset.theme = localStorage.getItem('lab.theme') || 'auto';
+                d.dataset.accent = localStorage.getItem('lab.accent') || 'blue';
+            } catch (e) { /* almacenamiento no disponible */
+            }
+        })();
+    </script>
+</head>
+<body>
+<div class="app" id="app">
+
+    <!-- ============ Sidebar ============ -->
+    <aside class="sidebar" id="sidebar" aria-label="Navegación y controles">
+        <div class="side-brand">
+            <img src="img/logo-pragma.png" alt="Logo PRAGMA">
+            <div>
+                <b>CAP &amp; BASE</b>
+                <span>Laboratorio CRUD</span>
+            </div>
+        </div>
+
+        <nav class="side-nav" aria-label="Secciones">
+            <span class="side-title">Laboratorio</span>
+            <a href="#/panel" data-view="panel"><i>▦</i> Panel</a>
+            <a href="#/secuencia" data-view="secuencia"><i>⇄</i> Secuencia</a>
+            <span class="side-title">Aprender</span>
+            <a href="#/guias" data-view="guias"><i>▶</i> Pruebas guiadas</a>
+            <a href="#/experimentos" data-view="experimentos"><i>⚗</i> Experimentos</a>
+            <a href="#/conceptos" data-view="conceptos"><i>?</i> Conceptos</a>
+        </nav>
+
+        <div class="side-block">
+            <span class="side-title">Estrategia</span>
+            <div class="seg" id="modeSeg" role="group" aria-label="Estrategia del clúster">
+                <button data-act="mode" data-mode="CP" class="cp">CP</button>
+                <button data-act="mode" data-mode="AP" class="ap">AP</button>
+            </div>
+            <label class="lat" title="Tiempo que tarda un mensaje entre nodos. En CP lo pagas en cada operación; en AP solo retrasa la replicación.">
+                <span>Latencia de red <b id="latv">–</b></span>
+                <input id="lat" type="range" min="0" max="2000" step="50" aria-describedby="latv">
+            </label>
+        </div>
+
+        <div class="side-block">
+            <span class="side-title">Apariencia</span>
+            <label class="theme-sel">Tema
+                <select id="themeSel">
+                    <option value="auto">Automático (sistema)</option>
+                    <option value="light">Claro</option>
+                    <option value="dark">Oscuro</option>
+                </select>
+            </label>
+            <div class="swatches" id="accentSwatches" role="group" aria-label="Color de acento">
+                <button data-accent="blue" title="Azul" aria-label="Azul"></button>
+                <button data-accent="teal" title="Verde azulado" aria-label="Verde azulado"></button>
+                <button data-accent="violet" title="Violeta" aria-label="Violeta"></button>
+                <button data-accent="orange" title="Naranja" aria-label="Naranja"></button>
+            </div>
+        </div>
+
+        <div class="side-block side-bottom">
+            <button class="btn danger wide" data-act="reset" title="Borra todos los datos y eventos, levanta los nodos y repara la red">
+                ↺ Reiniciar laboratorio</button>
+        </div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <!-- ============ Contenido ============ -->
+    <div class="content">
+        <header class="topbar">
+            <button class="icon-btn menu-btn" id="menuBtn" aria-label="Abrir menú" aria-controls="sidebar">☰</button>
+            <div class="crumbs">
+                <span class="muted">Laboratorio /</span> <h1 id="viewTitle">Panel</h1>
+            </div>
+            <div class="top-status" id="topStatus" aria-live="polite"></div>
+        </header>
+
+        <main>
+            <!-- ======= Vista: Panel ======= -->
+            <div class="view" data-view="panel">
+                <div class="banner" id="banner"></div>
+
+                <div class="kpis" id="stats"></div>
+
+                <section class="card step-card" id="clusterCard">
+                    <h2><span class="num">1</span> Clúster: mira los nodos y provoca fallos</h2>
+                    <div class="situation" id="situation" aria-live="polite"></div>
+                    <div id="nodes" class="grid3"></div>
+
+                    <div class="toolbar">
+                        <div class="tool">
+                            <span class="tool-title">Red</span>
+                            <button class="btn sm primary" data-act="heal" id="btnHeal"
+                                    title="Reconecta todos los nodos. En CP además sincroniza los rezagados.">Reparar red</button>
+                            <span class="hint">Para partir la red usa «Aislar» en la tarjeta de un nodo.</span>
+                        </div>
+                        <div class="tool">
+                            <span class="tool-title">Replicación (AP)</span>
+                            <button class="btn sm" data-act="replicate"
+                                    title="Entrega ahora los mensajes de replicación en cola sin esperar la latencia">Replicar ahora</button>
+                            <button class="btn sm" data-act="antientropy"
+                                    title="Compara las copias y reconcilia diferencias aunque no haya mensajes en cola">Anti-entropía</button>
+                        </div>
+                    </div>
+                    <div id="pending"></div>
+                </section>
+
+                <section class="two">
+                    <div class="card step-card">
+                        <h2><span class="num">2</span> Opera (CRUD) contra un nodo</h2>
+                        <div class="form">
+                            <label>Me conecto al nodo
+                                <select id="fNode">
+                                    <option>n1</option>
+                                    <option>n2</option>
+                                    <option>n3</option>
+                                </select></label>
+                            <label>ID <input id="fId" type="text" value="sku-1"></label>
+                            <label>Nombre <input id="fName" type="text" value="Café"></label>
+                            <label>Cantidad <input id="fQty" type="number" min="0" value="10"></label>
+                        </div>
+                        <div class="row crud-buttons">
+                            <button class="btn primary" data-act="crud" data-op="create" title="POST /api/items">
+                                <span class="crud-l">C</span> Crear</button>
+                            <button class="btn" data-act="crud" data-op="read" title="GET /api/items/{id}">
+                                <span class="crud-l">R</span> Leer</button>
+                            <button class="btn" data-act="crud" data-op="list" title="GET /api/items">
+                                <span class="crud-l">R</span> Listar</button>
+                            <button class="btn" data-act="crud" data-op="update" title="PUT /api/items/{id}">
+                                <span class="crud-l">U</span> Actualizar</button>
+                            <button class="btn danger" data-act="crud" data-op="delete" title="DELETE /api/items/{id}">
+                                <span class="crud-l">D</span> Borrar</button>
+                        </div>
+                        <div id="result" class="muted" aria-live="polite">
+                            Ejecuta una operación y aquí verás qué pasó, <b>por qué</b>, qué nodos participaron y si el dato es obsoleto.
+                        </div>
+                    </div>
+
+                    <div class="card step-card">
+                        <h2><span class="num">3</span> Observa qué ocurrió</h2>
+                        <div class="legend" id="legend"></div>
+                        <div class="log" id="log" aria-live="off"></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ======= Vista: Diagrama de secuencia ======= -->
+            <div class="view" data-view="secuencia" hidden>
+                <section class="card step-card">
+                    <h2><span class="num">1</span> Opera y provoca fallos</h2>
+                    <div class="form sq-form">
+                        <label>Me conecto al nodo
+                            <select id="sqNode">
+                                <option>n1</option>
+                                <option>n2</option>
+                                <option>n3</option>
+                            </select></label>
+                        <label>ID <input id="sqId" type="text" value="sku-1"></label>
+                        <label>Nombre <input id="sqName" type="text" value="Café"></label>
+                        <label>Cantidad <input id="sqQty" type="number" min="0" value="10"></label>
+                    </div>
+                    <div class="row crud-buttons">
+                        <button class="btn primary" data-act="seqCrud" data-op="create"><span class="crud-l">C</span> Crear</button>
+                        <button class="btn" data-act="seqCrud" data-op="read"><span class="crud-l">R</span> Leer</button>
+                        <button class="btn" data-act="seqCrud" data-op="list"><span class="crud-l">R</span> Listar</button>
+                        <button class="btn" data-act="seqCrud" data-op="update"><span class="crud-l">U</span> Actualizar</button>
+                        <button class="btn danger" data-act="seqCrud" data-op="delete"><span class="crud-l">D</span> Borrar</button>
+                    </div>
+                    <div class="row sq-faults">
+                        <span class="tool-title">Provocar</span>
+                        <button class="btn sm" data-act="isolate" data-node="n1">Aislar n1</button>
+                        <button class="btn sm" data-act="isolate" data-node="n2">Aislar n2</button>
+                        <button class="btn sm" data-act="isolate" data-node="n3">Aislar n3</button>
+                        <button class="btn sm" data-act="down" data-node="n1">Tumbar n1</button>
+                        <button class="btn sm" data-act="down" data-node="n2">Tumbar n2</button>
+                        <button class="btn sm" data-act="down" data-node="n3">Tumbar n3</button>
+                        <button class="btn sm primary" data-act="heal">Reparar red</button>
+                        <button class="btn sm" data-act="upall">Levantar nodos</button>
+                        <button class="btn sm" data-act="replicate">Replicar ahora</button>
+                    </div>
+                    <p class="hint">Cambia CP/AP y la latencia en la barra lateral. Cada operación (aquí, en el Panel o en las
+                        <a href="#/guias">Pruebas guiadas</a>) actualiza este diagrama.</p>
+                </section>
+
+                <section class="card step-card">
+                    <h2><span class="num">2</span> Secuencia de mensajes</h2>
+                    <div class="verdict" id="sqVerdict" hidden></div>
+                    <div class="row sq-play">
+                        <label class="inline">Animación
+                            <select id="sqMode">
+                                <option value="auto">Automática</option>
+                                <option value="step">Paso a paso</option>
+                            </select></label>
+                        <label class="inline">Velocidad
+                            <select id="sqSpeed">
+                                <option value="1.4">Lenta</option>
+                                <option value="0.8" selected>Normal</option>
+                                <option value="0.35">Rápida</option>
+                            </select></label>
+                        <button class="btn sm" data-act="seqReplay">↺ Repetir</button>
+                        <button class="btn sm primary" id="sqNext" data-act="seqNext" disabled>Siguiente ▶</button>
+                    </div>
+                    <div class="sq-stage" id="sqStage"></div>
+                    <div class="sq-legend">
+                        <span><i class="lg lg-solid"></i> petición / escritura síncrona</span>
+                        <span><i class="lg lg-dash"></i> respuesta / ack</span>
+                        <span><i class="lg lg-dot"></i> replicación asíncrona (en segundo plano)</span>
+                        <span><i class="lg lg-x">✖</i> sin ruta (partición o caído)</span>
+                        <span class="muted">Pasa el cursor sobre una flecha para ver su explicación.</span>
+                    </div>
+                    <ol class="sq-list" id="sqList"></ol>
+                </section>
+            </div>
+
+            <!-- ======= Vista: Pruebas guiadas ======= -->
+            <div class="view" data-view="guias" hidden>
+                <section class="card" id="guideCard">
+                    <h2>Pruebas guiadas (se ejecutan sobre el clúster del panel)</h2>
+                    <p class="muted">Cada prueba es una receta paso a paso: pulsa <b>Ejecutar</b> en cada paso (o <b>Ejecutar todo</b>) y la
+                        pantalla te dice si el resultado fue el esperado y qué debes observar. <b>El primer paso reinicia el laboratorio.</b>
+                        Mira el efecto en el <a href="#/panel">Panel</a> o, mensaje a mensaje, en el
+                        <a href="#/secuencia">diagrama de Secuencia</a>.</p>
+                    <div class="scn" id="guideButtons"></div>
+                    <div id="guideOut" class="muted">Elige una prueba para empezar.</div>
+                </section>
+            </div>
+
+            <!-- ======= Vista: Experimentos ======= -->
+            <div class="view" data-view="experimentos" hidden>
+                <section class="card">
+                    <h2>Experimentos explicados (transcripción, sin tocar el clúster)</h2>
+                    <div class="scn" id="scnButtons"></div>
+                    <div id="scnOut" class="muted">Elige un experimento para ver, paso a paso, qué ocurre y por qué.</div>
+                </section>
+            </div>
+
+            <!-- ======= Vista: Conceptos ======= -->
+            <div class="view" data-view="conceptos" hidden>
+                <section class="card concepts">
+                    <h2>Conceptos en 30 segundos</h2>
+                    <div class="concept-grid">
+                        <div>
+                            <h3>CRUD</h3>
+                            <p>Las 4 operaciones básicas sobre un dato: <b>C</b>rear, <b>R</b>eer, <b>U</b>pdate (actualizar) y <b>D</b>elete
+                                (borrar). Aquí el dato es un ítem de inventario (<code>id</code>, <code>nombre</code>, <code>cantidad</code>).</p>
+                        </div>
+                        <div>
+                            <h3>CAP</h3>
+                            <p>Cuando la red <b>se parte</b> (P), un sistema distribuido debe elegir:
+                                <b>C</b>onsistencia (nunca dar un dato incorrecto, aunque eso signifique rechazar) o
+                                <b>A</b>disponibilidad (responder siempre, aunque el dato pueda estar viejo).</p>
+                        </div>
+                        <div>
+                            <h3>BASE</h3>
+                            <p>La filosofía de los sistemas AP: <b>B</b>asically <b>A</b>vailable (siempre responde),
+                                <b>S</b>oft state (las copias pueden diferir un rato), <b>E</b>ventual consistency (al final todas coinciden).</p>
+                        </div>
+                        <div>
+                            <h3>Los 3 nodos</h3>
+                            <p><code>n1</code>, <code>n2</code> y <code>n3</code> son copias del mismo almacén. Tú eliges a cuál “te conectas”
+                                para operar; así ves qué responde cada uno cuando la red falla.</p>
+                        </div>
+                        <div>
+                            <h3>CP vs AP</h3>
+                            <p><b>CP</b> exige quórum (mayoría): si un nodo queda en minoría, rechaza con 503. <b>AP</b> responde siempre con
+                                su copia local y replica después; puede haber lecturas viejas y conflictos.</p>
+                        </div>
+                        <div>
+                            <h3>PACELC</h3>
+                            <p>Aun sin partición hay un costo: CP paga <b>latencia</b> en cada operación para mantener consistencia;
+                                AP responde rápido a cambio de consistencia diferida.</p>
+                        </div>
+                    </div>
+                </section>
+                <section class="card">
+                    <h2>Cómo usar el laboratorio</h2>
+                    <ol class="howto">
+                        <li>Elige <b>CP</b> o <b>AP</b> en la barra lateral.</li>
+                        <li>En el <a href="#/panel">Panel</a>, crea un ítem y luego <b>aísla un nodo</b> o <b>tumba</b> uno.</li>
+                        <li>Opera contra distintos nodos y lee el <b>veredicto</b> de cada operación.</li>
+                        <li>Repara la red y observa cómo convergen las copias.</li>
+                        <li>¿Prefieres una receta? Ve a <a href="#/guias">Pruebas guiadas</a>.</li>
+                    </ol>
+                </section>
+            </div>
+        </main>
+
+        <footer class="appfoot">
+            <div class="foot-status" id="footStatus"></div>
+            <div class="foot-links">
+                <a href="/api/cluster/state" target="_blank" rel="noopener">Estado (JSON)</a>
+                <a href="/api/cluster/events?limit=100" target="_blank" rel="noopener">Eventos (JSON)</a>
+                <a href="/api/lab/scenarios" target="_blank" rel="noopener">Escenarios</a>
+                <span class="muted">Simulación en memoria · los datos obsoletos se detectan con una “vista omnisciente” solo del laboratorio</span>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
